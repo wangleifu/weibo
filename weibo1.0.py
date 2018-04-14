@@ -81,7 +81,7 @@ def loop(driver, last_time):
         i += 1
         ActionChains(driver).move_to_element(element).perform()
         date = elements[0].find_element_by_xpath('//div[@class="WB_detail"]/div[2]/a[1]').get_attribute('date')
-        if date > last_time:
+        if int(date) > last_time:
             text = element.find_element_by_xpath('//div[@class="WB_detail"]/div[3]').text.strip()
             if (text.find('抽') != -1) or (text.find('送') != -1) or (text.find('开') != -1):
                 time.sleep(1)
@@ -100,7 +100,7 @@ def loop(driver, last_time):
         time.sleep(3)
 
     follow(follows)
-    last_time = elements[0].find_element_by_xpath('//div[@class="WB_detail"]/div[2]/a[1]').get_attribute('date')
+    last_time = int(elements[0].find_element_by_xpath('//div[@class="WB_detail"]/div[2]/a[1]').get_attribute('date'))
     print('执行结束, 休息10分钟')
     sleep(60*10)
 
@@ -111,8 +111,8 @@ login_url = "https://login.sina.com.cn/signup/signin.php?entry=sso"
 driver.get(login_url)
 
 # 登录页面
-WebDriverWait(driver, 10).until(lambda x: x.find_element_by_id('username')).send_keys('18507138053')
-WebDriverWait(driver, 10).until(lambda x: x.find_element_by_id('password')).send_keys('Ww,.941025')
+WebDriverWait(driver, 10).until(lambda x: x.find_element_by_id('username')).send_keys('username')
+WebDriverWait(driver, 10).until(lambda x: x.find_element_by_id('password')).send_keys('password')
 WebDriverWait(driver, 10).until(lambda x: x.find_element_by_css_selector('#vForm > div.main_cen > div > ul > li:nth-child(8) > div.btn_mod > input')).click()
 print('---进入新浪个人中心---')
 
