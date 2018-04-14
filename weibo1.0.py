@@ -56,7 +56,11 @@ def follow(follows):
         handles = driver.window_handles
         driver.switch_to.window(handles[2])
         gz = WebDriverWait(driver, 10).until(lambda x: x.find_element_by_xpath('//*[@id="Pl_Official_Headerv6__1"]/div[1]/div/div[2]/div[4]/div/div[1]/a[1]'))
+        if ((gz.text == '已关注') or (gz.text == 'Y已关注')):
+        	print('----已关注博主，无需重复操作！')
+        	continue
         gz.click()
+        print('-----新关注一名用户！')
         driver.close()
         driver.switch_to.window(handles[1])
         time.sleep(2)
@@ -80,12 +84,12 @@ def loop(driver, last_time):
     for element in elements:
         i += 1
         ActionChains(driver).move_to_element(element).perform()
-        date = element.find_element_by_xpath('//div[@class="WB_detail"]/div[2]/a[1]').get_attribute('date')
-        if int(date) > last_time:
-            text = element.find_element_by_xpath('//div[@class="WB_detail"]/div[3]').text.strip()
+        date = element.find_element_by_xpath('div[1]/div[3]/div[2]/a[1]').get_attribute('date')
+        if int(int(date)/1000) > last_time:
+            text = element.find_element_by_xpath('div[1]/div[3]/div[3]').text.strip()
             if (text.find('抽') != -1) or (text.find('送') != -1) or (text.find('开') != -1):
                 time.sleep(1)
-                print('---抽奖微博，执行操作！---')
+                print('---抽奖微博, 执行操作！---')
                 if text.find('赞') != -1:
                     print(' ------需要点赞！！！', i)
                     praise(driver, element)
@@ -96,18 +100,18 @@ def loop(driver, last_time):
                     print(' ------需要关注！！！', i)
                     add(element, follows)
         else:
-            print('---以前的抽奖微博，忽略！---')
-            continue
+        	print('---以前的微博，忽略！---')
+        	continue
         time.sleep(3)
 
     follow(follows)
     last_time = int(elements[0].find_element_by_xpath('//div[@class="WB_detail"]/div[2]/a[1]').get_attribute('date'))
     print('执行结束, 休息10分钟')
-    sleep(60*10)
+    time.sleep(60*10)
 
 # 用Chrome浏览器打开登录页面
 driver = webdriver.Chrome()
-driver.maximize_window()
+# driver.maximize_window()
 login_url = "https://login.sina.com.cn/signup/signin.php?entry=sso"
 driver.get(login_url)
 
@@ -129,13 +133,19 @@ wb = handles[1]
 driver.switch_to.window(wb)
 
 # 点击原创
-original = WebDriverWait(driver, 10).until(lambda x: x.find_element_by_xpath('//*[@id="v6_pl_content_homefeed"]/div/div[1]/div/ul/li[3]/a'))
-original.click()
-print('---进入原创页面---')
-time.sleep(2)
+flag = True
+while flag:
+	try:
+		original = WebDriverWait(driver, 10).until(lambda x: x.find_element_by_xpath('//*[@id="v6_pl_content_homefeed"]/div/div[1]/div/ul/li[3]/a'))
+		original.click()
+		print('---进入原创页面---')
+		flag = False
+		time.sleep(2)
+	except:
+		driver.refresh()
 
 # 初次启动，只抓取24小时内的微博
-last_time = int(time.time()) - 60*60*24
+last_time = int(time.time()) - 60*60*48
 while True:
     loop(driver, last_time)
 
