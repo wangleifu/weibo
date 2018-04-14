@@ -80,12 +80,12 @@ def loop(driver, last_time):
     for element in elements:
         i += 1
         ActionChains(driver).move_to_element(element).perform()
-        date = elements[0].find_element_by_xpath('//div[@class="WB_detail"]/div[2]/a[1]').get_attribute('date')
+        date = element.find_element_by_xpath('//div[@class="WB_detail"]/div[2]/a[1]').get_attribute('date')
         if int(date) > last_time:
             text = element.find_element_by_xpath('//div[@class="WB_detail"]/div[3]').text.strip()
             if (text.find('抽') != -1) or (text.find('送') != -1) or (text.find('开') != -1):
                 time.sleep(1)
-                print('---以前的抽奖微博，忽略！---')
+                print('---抽奖微博，执行操作！---')
                 if text.find('赞') != -1:
                     print(' ------需要点赞！！！', i)
                     praise(driver, element)
@@ -96,6 +96,7 @@ def loop(driver, last_time):
                     print(' ------需要关注！！！', i)
                     add(element, follows)
         else:
+            print('---以前的抽奖微博，忽略！---')
             continue
         time.sleep(3)
 
