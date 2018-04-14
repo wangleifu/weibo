@@ -71,18 +71,7 @@ for element in elements:
     if (len(date) < 2) or date[0] == '今天':
         text = element.find_element_by_xpath('//div[@class="WB_detail"]/div[3]').text.strip()
         if (text.find('抽') != -1) or (text.find('送') != -1) or (text.find('开') != -1):
-            print("抽奖的微博：", text)
-            if text.find('赞') != -1:
-                print('------需要点赞！！！')
-            if text.find('转') != -1:
-                print('------需要转发！！！')
-            if text.find('关注') != -1:
-                print('------需要关注！！！')
-    else:
-        text = element.find_element_by_xpath('//div[@class="WB_detail"]/div[3]').text.strip()
-        if (text.find('抽') != -1) or (text.find('送') != -1) or (text.find('开') != -1):
             time.sleep(1)
-            print('---以前的抽奖微博，忽略！---')
             if text.find('赞') != -1:
                 print(' ------需要点赞！！！', i)
                 confirm(driver)
@@ -106,6 +95,7 @@ for element in elements:
                 follows.append(href)
                 print("follows: ", follows)
                 print(' -----完成关注保存！')
+    else:
         continue
     time.sleep(3)
 
