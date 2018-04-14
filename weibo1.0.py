@@ -88,10 +88,10 @@ def loop(driver, last_time):
                 print('---以前的抽奖微博，忽略！---')
                 if text.find('赞') != -1:
                     print(' ------需要点赞！！！', i)
-                    praise(driver, feed_handle)
+                    praise(driver, element)
                 if text.find('转') != -1:
                     print(' ------需要转发！！！', i)
-                    repost(driver, feed_handle)
+                    repost(driver, element)
                 if text.find('关注') != -1:
                     print(' ------需要关注！！！', i)
                     add(element, follows)
