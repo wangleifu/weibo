@@ -38,7 +38,8 @@ def repost(driver, element):
     post.click()
     print(' -----完成转发！')
     time.sleep(2)
-
+    
+# 添加关注列表
 def add(element, follows):
     href = element.find_element_by_xpath('div[1]/div[3]/div[3]/a').get_attribute('href')
     follows.append(href)
@@ -51,7 +52,7 @@ def follow(follows):
         print('----此次不需要关注操作！')
         return
     for follow in follows:
-        ActionChains(browser).key_down(Keys.CONTROL).send_keys("t").key_up(Keys.CONTROL).perform()
+        ActionChains(driver).key_down(Keys.CONTROL).send_keys("t").key_up(Keys.CONTROL).perform()
         driver.get(follow)
         # handle = driver.window_handles[2]
         # driver.switch_to.window(handles)
