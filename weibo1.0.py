@@ -14,17 +14,27 @@ def confirm(driver):
     except:
         return False
 
-def get_element(driver, element, xpath):
+def get_element(driver, xpath):
     flag = True
     while flag:
         try:
-            tag = WebDriverWait(element, 10).until(lambda x: x.find_element_by_xpath(xpath))
+            tag = WebDriverWait(driver, 10).until(lambda x: x.find_element_by_xpath(xpath))
             return tag
+        except:
+            driver.refresh()
+
+def get_elements(drivre,xpath):
+    flag = True
+    while flag:
+        try:
+            tags = WebDriverWait(drivre, 10).until(lambda x: x.find_elements_by_xpath(xpath))
+            return tags
         except:
             driver.refresh()
 
 # 点赞操作
 def praise(driver, element):
+    ActionChains(driver).move_to_element(element).perform()
     praise = WebDriverWait(element, 10).until(lambda x: x.find_element_by_xpath('div[@class="WB_feed_handle"]/div/ul/li[4]/a'))
     if praise.get_attribute('title') == '赞':
         confirm(driver)
@@ -57,10 +67,20 @@ def repost(driver, element):
 			driver.refresh()
 
 def add(element, follows):
-	ActionChains(driver).move_to_element(element).perform()
-	href = element.find_element_by_xpath('div[1]/div[@class="WB_detail"]/div[3]/a').get_attribute('href')
-	follows.append(href)
-	print('  -----完成保存需要关注的微博！')
+    try:
+        a_tags = element.find_elements_by_xpath('a')
+    except:
+        a_tags = []
+
+    if len(a_tags) == 1:
+        href = a_tags[0].get_attribute('href')
+        follows.append(href)
+    else:
+        for a_tag in a_tags:
+            if a_tag.text.startswith("@"):
+                href = a_tag.get_attribute('href')
+                follows.append(href)
+    print('  -----完成保存需要关注的微博！')
 
 # 关注新用户操作
 def follow(driver, follows):
@@ -74,19 +94,20 @@ def follow(driver, follows):
         driver.execute_script(js)
         handles = driver.window_handles
         driver.switch_to.window(handles[2])
-        gz = get_element(driver, element, '//*[@id="Pl_Official_Headerv6__1"]/div[1]/div/div[2]/div[4]/div/div[1]/a[1]')
+        gz = get_element(driver, '//*[@id="Pl_Official_Headerv6__1"]/div[1]/div/div[2]/div[4]/div/div[1]/a[1]')
         # gz = WebDriverWait(driver, 10).until(lambda x: x.find_element_by_xpath('//*[@id="Pl_Official_Headerv6__1"]/div[1]/div/div[2]/div[4]/div/div[1]/a[1]'))
-        if ((gz.text == '已关注') or (gz.text == 'Y已关注')):
-        	print('    ----已关注博主，无需重复操作！')
-        else:
+        if ((gz.text == '+关注') or (gz.text == '关注')):
             gz.click()
-            print('    -----新关注一名用户！')
+            print('    ----新关注一名用户!')
+        else:
+            print('    -----已关注博主，无需重复操作！')
         driver.close()
         driver.switch_to.window(handles[1])
     print('    -----关注操作完成，关闭当前窗口并切换至首页窗口！')
+    follows = []
     time.sleep(2)
 
-def operation(elements, last_time):
+def operation(driver, elements, last_time):
     i = 0
     follows = []
     max_time = last_time
@@ -106,7 +127,8 @@ def operation(elements, last_time):
             if date > max_time:
                 max_time = date
                 print('更新当前max_time：', max_time)
-            text = element.find_element_by_xpath('div[1]/div[@class="WB_detail"]/div[3]').text.strip()
+            text_div = element.find_element_by_xpath('div[1]/div[@class="WB_detail"]/div[@class="WB_text W_f14"]')
+            text = text_div.text.strip()
             if (text.find('抽') != -1) or (text.find('送') != -1) or (text.find('开') != -1):
                 time.sleep(1)
                 print('---抽奖微博, 执行操作！---')
@@ -118,7 +140,7 @@ def operation(elements, last_time):
                     repost(driver, element)
                 if text.find('关注') != -1:
                     print(' ------需要关注！！！', i)
-                    add(element, follows)
+                    add(text_div, follows)
         else:
             print('---以前的微博，忽略！---')
         time.sleep(3)
@@ -136,7 +158,8 @@ def loop(driver, last_time):
         time.sleep(2)
 
     # 获取当前页的所有用户微博
-    elements = driver.find_elements_by_xpath('//*[@id="v6_pl_content_homefeed"]/div/div[3]/div')
+    # elements = driver.find_elements_by_xpath('//*[@id="v6_pl_content_homefeed"]/div/div[@class="WB_feed WB_feed_v3 WB_feed_v4"]/div')
+    elements = get_elements(driver, '//*[@id="v6_pl_content_homefeed"]/div/div[@class="WB_feed WB_feed_v3 WB_feed_v4"]/div')
     elements = elements[:len(elements)-2]
     print('---共获取到 %d 条原创微博---' % len(elements))
 
