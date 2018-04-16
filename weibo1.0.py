@@ -14,6 +14,15 @@ def confirm(driver):
     except:
         return False
 
+def get_element(driver, element, xpath):
+    flag = True
+    while flag:
+        try:
+            tag = WebDriverWait(element, 10).until(lambda x: x.find_element_by_xpath(xpath))
+            return tag
+        except:
+            driver.refresh()
+
 # 点赞操作
 def praise(driver, element):
     praise = WebDriverWait(element, 10).until(lambda x: x.find_element_by_xpath('div[@class="WB_feed_handle"]/div/ul/li[4]/a'))
@@ -65,48 +74,38 @@ def follow(driver, follows):
         driver.execute_script(js)
         handles = driver.window_handles
         driver.switch_to.window(handles[2])
-        gz = WebDriverWait(driver, 10).until(lambda x: x.find_element_by_xpath('//*[@id="Pl_Official_Headerv6__1"]/div[1]/div/div[2]/div[4]/div/div[1]/a[1]'))
+        gz = get_element(driver, element, '//*[@id="Pl_Official_Headerv6__1"]/div[1]/div/div[2]/div[4]/div/div[1]/a[1]')
+        # gz = WebDriverWait(driver, 10).until(lambda x: x.find_element_by_xpath('//*[@id="Pl_Official_Headerv6__1"]/div[1]/div/div[2]/div[4]/div/div[1]/a[1]'))
         if ((gz.text == '已关注') or (gz.text == 'Y已关注')):
         	print('    ----已关注博主，无需重复操作！')
-        	driver.close()
-        	driver.switch_to.window(handles[1])
-        	print('    ----切换窗口至微博首页！')
-        	continue
-        gz.click()
-        print('    -----新关注一名用户！')
+        else:
+            gz.click()
+            print('    -----新关注一名用户！')
         driver.close()
         driver.switch_to.window(handles[1])
     print('    -----关注操作完成，关闭当前窗口并切换至首页窗口！')
     time.sleep(2)
 
-def loop(driver, last_time):
-    # 刷新出本页所有微博
-    driver.refresh()
-    for i in range(3):
-        driver.execute_script("window.scrollTo(0, document.body.scrollHeight)")
-        print('-----下拉加载页面！')
-        time.sleep(2)
-
-    # 获取当前页的所有用户微博
-    elements = driver.find_elements_by_xpath('//*[@id="v6_pl_content_homefeed"]/div/div[3]/div')
-    elements = elements[:len(elements)-2]
-    print('---共获取到 %d 条原创微博---' % len(elements))
-
-    # 爬取所有微博并对符合要求的微博（抽奖微博）进行相应的操作
+def operation(elements, last_time):
     i = 0
     follows = []
+    max_time = last_time
     for element in elements:
         i += 1
         ActionChains(driver).move_to_element(element).perform()
         flag = True
         while flag:
-        	try:
-        		date = WebDriverWait(element, 10).until(lambda x: x.find_element_by_xpath('div[1]/div[@class="WB_detail"]/div[2]/a[1]').get_attribute('date')) #element.find_element_by_xpath('div[1]/div[@class="WB_detail"]/div[2]/a[1]').get_attribute('date')
-        		flag = False
-        	except:
-        		print('<----找不到日期标签！---->')
-        		driver.refresh()
-        if int(int(date)/1000) > last_time:
+            try:
+                date = WebDriverWait(element, 10).until(lambda x: x.find_element_by_xpath('div[1]/div[@class="WB_detail"]/div[2]/a[1]').get_attribute('date')) #element.find_element_by_xpath('div[1]/div[@class="WB_detail"]/div[2]/a[1]').get_attribute('date')
+                flag = False
+            except:
+                print('<----找不到日期标签！---->')
+                driver.refresh()
+        date = int(int(date)/1000)
+        if date > last_time:
+            if date > max_time:
+                max_time = date
+                print('更新当前max_time：', max_time)
             text = element.find_element_by_xpath('div[1]/div[@class="WB_detail"]/div[3]').text.strip()
             if (text.find('抽') != -1) or (text.find('送') != -1) or (text.find('开') != -1):
                 time.sleep(1)
@@ -121,11 +120,33 @@ def loop(driver, last_time):
                     print(' ------需要关注！！！', i)
                     add(element, follows)
         else:
-        	print('---以前的微博，忽略！---')
+            print('---以前的微博，忽略！---')
         time.sleep(3)
-    last_time = int(int(elements[0].find_element_by_xpath('div[1]/div[@class="WB_detail"]/div[2]/a[1]').get_attribute('date'))/1000)
+    last_time = max_time
+    print('更新last_time：', last_time)
     follow(driver, follows)
-    print('执行结束, 休息一小时！')
+
+# 执行操作的循环
+def loop(driver, last_time):
+    # 刷新出本页所有微博
+    driver.refresh()
+    for i in range(3):
+        driver.execute_script("window.scrollTo(0, document.body.scrollHeight)")
+        print('-----下拉加载页面！')
+        time.sleep(2)
+
+    # 获取当前页的所有用户微博
+    elements = driver.find_elements_by_xpath('//*[@id="v6_pl_content_homefeed"]/div/div[3]/div')
+    elements = elements[:len(elements)-2]
+    print('---共获取到 %d 条原创微博---' % len(elements))
+
+    # 爬取所有微博并对符合要求的微博（抽奖微博）进行相应的操作
+    if len(elements) > 0:
+        operation(driver, elements, last_time)
+        print('本次执行结束！')
+    else:
+        print('本次没有更新微博，不需要操作！')
+    # 间隔1小时
     time.sleep(60*60)
 
 # 用Chrome浏览器打开登录页面
