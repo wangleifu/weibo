@@ -42,7 +42,8 @@ def praise(driver, element):
         while confirm(driver):
             praise.click()
         print('  -----成功点赞！')
-    print('  ----已赞！')
+    else:
+        print('  -----已赞！')
     time.sleep(2)
 
 # 转发操作
@@ -86,13 +87,14 @@ def add(element, follows):
     if len(a_tags) == 1:
         href = a_tags[0].get_attribute('href')
         follows.append(href)
+        print('  -----保存需要关注人的微博: ', a_tags[0].text)
     else:
         for a_tag in a_tags:
             if a_tag.text.startswith("@"):
-            	if not a_tag.text.startswith('@微博抽奖平台'):
-            		href = a_tag.get_attribute('href')
-            		follows.append(href)
-            		print('  -----保存需要关注人的微博: ', a_tag.text)
+                if not a_tag.text.startswith('@微博抽奖平台'):
+                    href = a_tag.get_attribute('href')
+                    follows.append(href)
+                    print('  -----保存需要关注人的微博: ', a_tag.text)
 
 # 关注新用户操作
 def follow(driver, follows):
@@ -121,6 +123,7 @@ def follow(driver, follows):
 
 def operation(driver, elements, last_time):
     i = 0
+    m = len(elements)
     follows = []
     max_time = last_time
     for element in elements:
@@ -155,17 +158,20 @@ def operation(driver, elements, last_time):
                     add(text_div, follows)
         else:
             print('---以前的微博，忽略！---')
+            break
         time.sleep(3)
-    last_time = max_time
-    with open('time.txt','w') as f:
-    	f.write(str(last_time))
-    print('更新last_time：', last_time)
+    if i == m:
+    	print('<----抓取下一页---->')
+    	next_page = WebDriverWait(driver, 10).until(lambda x: x.find_element_by_xpath('//div[@class="W_pages"]/a[@class="page next S_txt1 S_line1"]'))
+    	next_page.click()
+    	time.sleep(3)
+    	loop(driver, last_time)
     follow(driver, follows)
+    return max_time
 
 # 执行操作的循环
 def loop(driver, last_time):
     # 刷新出本页所有微博
-    driver.refresh()
     for i in range(3):
         driver.execute_script("window.scrollTo(0, document.body.scrollHeight)")
         print('-----下拉加载页面！')
@@ -179,12 +185,12 @@ def loop(driver, last_time):
 
     # 爬取所有微博并对符合要求的微博（抽奖微博）进行相应的操作
     if len(elements) > 0:
-        operation(driver, elements, last_time)
-        print('本次执行结束！')
+        max_time = operation(driver, elements, last_time)
     else:
-        print('本次没有更新微博，不需要操作！')
-    # 间隔1小时
-    time.sleep(60*60)
+        print('无法获取微博内容！')
+    return max_time
+
+
 
 # 用Chrome浏览器打开登录页面
 driver = webdriver.Chrome()
@@ -193,8 +199,8 @@ login_url = "https://login.sina.com.cn/signup/signin.php?entry=sso"
 driver.get(login_url)
 
 # 登录页面
-WebDriverWait(driver, 10).until(lambda x: x.find_element_by_id('username')).send_keys('18507138053')
-WebDriverWait(driver, 10).until(lambda x: x.find_element_by_id('password')).send_keys('wgy..123')
+WebDriverWait(driver, 10).until(lambda x: x.find_element_by_id('username')).send_keys('username')
+WebDriverWait(driver, 10).until(lambda x: x.find_element_by_id('password')).send_keys('password')
 WebDriverWait(driver, 10).until(lambda x: x.find_element_by_css_selector('#vForm > div.main_cen > div > ul > li:nth-child(8) > div.btn_mod > input')).click()
 print('---进入新浪个人中心---')
 
@@ -216,19 +222,6 @@ handles = driver.window_handles
 wb = handles[1]
 driver.switch_to.window(wb)
 
-# 点击原创
-flag = True
-while flag:
-	try:
-		original = WebDriverWait(driver, 10).until(lambda x: x.find_element_by_xpath('//*[@id="v6_pl_content_homefeed"]/div/div[1]/div/ul/li[3]/a'))
-		original.click()
-		print('---进入原创页面---')
-		flag = False
-		time.sleep(2)
-	except:
-		print('<----我的微博首页加载失败，刷新重试---->')
-		driver.refresh()
-
 # 初次启动，只抓取24小时内的微博
 try:
 	with open('time.txt','r') as f:
@@ -236,6 +229,31 @@ try:
 except:
 	last_time = int(time.time()) - 60*60*24
 
+
+
 while True:
-    loop(driver, last_time)
+
+	# 点击原创
+	flag = True
+	while flag:
+		try:
+			original = WebDriverWait(driver, 10).until(lambda x: x.find_element_by_xpath('//*[@id="v6_pl_content_homefeed"]/div/div[1]/div/ul/li[3]/a'))
+			original.click()
+			print('---进入原创页面---')
+			flag = False
+			time.sleep(2)
+		except:
+			print('<----我的微博首页，原创微博页面加载失败，刷新重试---->')
+			driver.refresh()
+
+	last_time = loop(driver, last_time)
+
+	# 保存上次最新微博的时间，下次之对更新微博进行操作
+	with open('time.txt','w') as f:
+		f.write(str(last_time))
+		print('更新last_time：', last_time)
+
+	print('本次执行结束，休息1小时后继续！')
+    # 间隔1小时
+	time.sleep(60*60)
 
