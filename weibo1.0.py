@@ -56,15 +56,26 @@ def repost(driver, element):
 			repost.click()
 			while confirm(driver):
 				repost.click()
-			path = '//*[@class="W_layer "]/div[2]/div[3]/div/div[2]/div/div[2]/div/div[1]/div/div[2]/div[1]/a'
+			textarea_path = '//div[@class="p_input p_textarea"]/textarea'
+			textarea = WebDriverWait(driver, 10).until(lambda x: x.find_element_by_xpath(textarea_path))
+			textarea.send_keys('我想要MacBook!!!')
+			time.sleep(1)
+			checkbox_path = '//*[@id="forward_comment_opt_originLi"]'
+			checkbox = WebDriverWait(driver, 10).until(lambda x: x.find_element_by_xpath(checkbox_path))
+			checkbox.click()
+			time.sleep(1)
+			path = '//div[@class="btn W_fr"]/a[@class="W_btn_a"]'
 			post = WebDriverWait(driver, 10).until(lambda x: x.find_element_by_xpath(path))
 			post.click()
 			print('  -----完成转发！')
 			flag = False
 			time.sleep(2)
 		except:
-			print('<----转发失败，刷新重试！---->')
-			driver.refresh()
+			print('<----转发失败！---->')
+			text = element.find_element_by_xpath('div[1]/div[@class="WB_detail"]/div[@class="WB_text W_f14"]').strip().text
+			print('   微博内容如下：')
+			print('        ', text)
+			return
 
 def add(element, follows):
     try:
@@ -78,15 +89,16 @@ def add(element, follows):
     else:
         for a_tag in a_tags:
             if a_tag.text.startswith("@"):
-                href = a_tag.get_attribute('href')
-                follows.append(href)
-    print('  -----完成保存需要关注的微博！')
+            	if not a_tag.text.startswith('@微博抽奖平台'):
+            		href = a_tag.get_attribute('href')
+            		follows.append(href)
+            		print('  -----保存需要关注人的微博: ', a_tag.text)
 
 # 关注新用户操作
 def follow(driver, follows):
     print(' ----处理需要关注人列表！')
     if len(follows) == 0:
-        print('  ----此次不需要关注操作！')
+        print('  ----此次没有需要关注的人！')
         return
     for follow in follows:
         js='window.open("%s");' % follow
@@ -103,7 +115,7 @@ def follow(driver, follows):
             print('    -----已关注博主，无需重复操作！')
         driver.close()
         driver.switch_to.window(handles[1])
-    print('    -----关注操作完成，关闭当前窗口并切换至首页窗口！')
+    print('    -----完成对关注人列表的关注！')
     follows = []
     time.sleep(2)
 
@@ -133,18 +145,20 @@ def operation(driver, elements, last_time):
                 time.sleep(1)
                 print('---抽奖微博, 执行操作！---')
                 if text.find('赞') != -1:
-                    print(' ------需要点赞！！！', i)
+                    print(' ------点赞！！！', i)
                     praise(driver, element)
-                if text.find('转') != -1:
-                    print(' ------需要转发！！！', i)
+                if (text.find('转') != -1) or (text.find('评论') != -1):
+                    print(' ------转发+评论！！！', i)
                     repost(driver, element)
                 if text.find('关注') != -1:
-                    print(' ------需要关注！！！', i)
+                    print(' ------保存关注！！！', i)
                     add(text_div, follows)
         else:
             print('---以前的微博，忽略！---')
         time.sleep(3)
     last_time = max_time
+    with open('time.txt','w') as f:
+    	f.write(str(last_time))
     print('更新last_time：', last_time)
     follow(driver, follows)
 
@@ -155,7 +169,7 @@ def loop(driver, last_time):
     for i in range(3):
         driver.execute_script("window.scrollTo(0, document.body.scrollHeight)")
         print('-----下拉加载页面！')
-        time.sleep(2)
+        time.sleep(3)
 
     # 获取当前页的所有用户微博
     # elements = driver.find_elements_by_xpath('//*[@id="v6_pl_content_homefeed"]/div/div[@class="WB_feed WB_feed_v3 WB_feed_v4"]/div')
@@ -174,13 +188,13 @@ def loop(driver, last_time):
 
 # 用Chrome浏览器打开登录页面
 driver = webdriver.Chrome()
-# driver.maximize_window()
+driver.maximize_window()
 login_url = "https://login.sina.com.cn/signup/signin.php?entry=sso"
 driver.get(login_url)
 
 # 登录页面
-WebDriverWait(driver, 10).until(lambda x: x.find_element_by_id('username')).send_keys('username')
-WebDriverWait(driver, 10).until(lambda x: x.find_element_by_id('password')).send_keys('password')
+WebDriverWait(driver, 10).until(lambda x: x.find_element_by_id('username')).send_keys('18507138053')
+WebDriverWait(driver, 10).until(lambda x: x.find_element_by_id('password')).send_keys('wgy..123')
 WebDriverWait(driver, 10).until(lambda x: x.find_element_by_css_selector('#vForm > div.main_cen > div > ul > li:nth-child(8) > div.btn_mod > input')).click()
 print('---进入新浪个人中心---')
 
@@ -216,7 +230,12 @@ while flag:
 		driver.refresh()
 
 # 初次启动，只抓取24小时内的微博
-last_time = int(time.time()) - 60*60*24
+try:
+	with open('time.txt','r') as f:
+		last_time = int(f.read())
+except:
+	last_time = int(time.time()) - 60*60*24
+
 while True:
     loop(driver, last_time)
 
