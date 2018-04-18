@@ -238,6 +238,7 @@ while True:
 	while flag:
 		try:
 			original = WebDriverWait(driver, 10).until(lambda x: x.find_element_by_xpath('//*[@id="v6_pl_content_homefeed"]/div/div[1]/div/ul/li[3]/a'))
+			ActionChains(driver).move_to_element(original).perform()
 			original.click()
 			print('---进入原创页面---')
 			flag = False
