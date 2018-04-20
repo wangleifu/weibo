@@ -7,7 +7,7 @@ import time
 # 如果有操作太快的提示框，点击确定
 def confirm(driver):
     try:
-        confirm = WebDriverWait(driver, 1).until(lambda x: x.find_element_by_xpath('//*[@class="W_layer_btn S_bg1"]/a'))
+        confirm = WebDriverWait(driver, 3).until(lambda x: x.find_element_by_xpath('//*[@class="W_layer_btn S_bg1"]/a'))
         confirm.click()
         print(' ----处理提示框！')
         return True
@@ -21,15 +21,20 @@ def get_element(driver, xpath):
             tag = WebDriverWait(driver, 10).until(lambda x: x.find_element_by_xpath(xpath))
             return tag
         except:
+            time.sleep(2)
+            print('当前标签获取失败，刷新重试！')
             driver.refresh()
 
-def get_elements(drivre,xpath):
+def get_elements(driver, xpath):
     flag = True
     while flag:
         try:
-            tags = WebDriverWait(drivre, 10).until(lambda x: x.find_elements_by_xpath(xpath))
+            tags = WebDriverWait(driver, 10).until(lambda x: x.find_elements_by_xpath(xpath))
+            flag = False
             return tags
         except:
+            time.sleep(2)
+            print('当前标签集获取失败，刷新重试！')
             driver.refresh()
 
 # 点赞操作
@@ -51,6 +56,7 @@ def repost(driver, element):
 	flag = True
 	while flag:
 		try:
+			confirm(driver)
 			ActionChains(driver).move_to_element(element).perform()
 			repost = WebDriverWait(element, 10).until(lambda x: x.find_element_by_xpath('div[@class="WB_feed_handle"]/div/ul/li[2]/a'))
 			confirm(driver)
@@ -59,7 +65,7 @@ def repost(driver, element):
 				repost.click()
 			textarea_path = '//div[@class="p_input p_textarea"]/textarea'
 			textarea = WebDriverWait(driver, 10).until(lambda x: x.find_element_by_xpath(textarea_path))
-			textarea.send_keys('我想要MacBook!!!')
+			textarea.send_keys('抽我！抽我！！抽我！！！')
 			time.sleep(1)
 			checkbox_path = '//*[@id="forward_comment_opt_originLi"]'
 			checkbox = WebDriverWait(driver, 10).until(lambda x: x.find_element_by_xpath(checkbox_path))
@@ -73,7 +79,7 @@ def repost(driver, element):
 			time.sleep(2)
 		except:
 			print('<----转发失败！---->')
-			text = element.find_element_by_xpath('div[1]/div[@class="WB_detail"]/div[@class="WB_text W_f14"]').strip().text
+			text = element.find_element_by_xpath('div[@class="WB_feed_detail clearfix"]/div[@class="WB_detail"]/div[@class="WB_text W_f14"]').strip().text
 			print('   微博内容如下：')
 			print('        ', text)
 			return
@@ -132,17 +138,21 @@ def operation(driver, elements, last_time):
         flag = True
         while flag:
             try:
-                date = WebDriverWait(element, 10).until(lambda x: x.find_element_by_xpath('div[1]/div[@class="WB_detail"]/div[2]/a[1]').get_attribute('date')) #element.find_element_by_xpath('div[1]/div[@class="WB_detail"]/div[2]/a[1]').get_attribute('date')
+                date = WebDriverWait(element, 10).until(lambda x: x.find_element_by_xpath('div[@class="WB_feed_detail clearfix"]/div[@class="WB_detail"]/div[2]/a[1]'))
                 flag = False
             except:
                 print('<----找不到日期标签！---->')
-                driver.refresh()
+                continue
+        if (date.text.find('推荐') != -1):
+        	continue
+        date = date.get_attribute('date')
+
         date = int(int(date)/1000)
         if date > last_time:
             if date > max_time:
                 max_time = date
                 print('更新当前max_time：', max_time)
-            text_div = element.find_element_by_xpath('div[1]/div[@class="WB_detail"]/div[@class="WB_text W_f14"]')
+            text_div = element.find_element_by_xpath('div[@class="WB_feed_detail clearfix"]/div[@class="WB_detail"]/div[@class="WB_text W_f14"]')
             text = text_div.text.strip()
             if (text.find('抽') != -1) or (text.find('送') != -1) or (text.find('开') != -1):
                 time.sleep(1)
@@ -162,10 +172,15 @@ def operation(driver, elements, last_time):
         time.sleep(3)
     if i == m:
     	print('<----抓取下一页---->')
-    	next_page = WebDriverWait(driver, 10).until(lambda x: x.find_element_by_xpath('//div[@class="W_pages"]/a[@class="page next S_txt1 S_line1"]'))
-    	next_page.click()
-    	time.sleep(3)
-    	loop(driver, last_time)
+    	try:
+    		next_page = WebDriverWait(driver, 10).until(lambda x: x.find_element_by_xpath('//a[@class="page next S_txt1 S_line1"]'))
+    		ActionChains(driver).move_to_element(next_page).perform()
+    		next_page.click()
+    		time.sleep(3)
+    		loop(driver, last_time)
+    	except:
+    		print('找不到下一页标签！')
+
     follow(driver, follows)
     return max_time
 
@@ -179,8 +194,8 @@ def loop(driver, last_time):
 
     # 获取当前页的所有用户微博
     # elements = driver.find_elements_by_xpath('//*[@id="v6_pl_content_homefeed"]/div/div[@class="WB_feed WB_feed_v3 WB_feed_v4"]/div')
-    elements = get_elements(driver, '//*[@id="v6_pl_content_homefeed"]/div/div[@class="WB_feed WB_feed_v3 WB_feed_v4"]/div')
-    elements = elements[:len(elements)-2]
+    elements = get_elements(driver, '//div[@id="v6_pl_content_homefeed"]/div[1]/div[@class="WB_feed WB_feed_v3 WB_feed_v4"]/div')
+    elements = elements[:-2]
     print('---共获取到 %d 条原创微博---' % len(elements))
 
     # 爬取所有微博并对符合要求的微博（抽奖微博）进行相应的操作
@@ -214,6 +229,7 @@ while flag:
 		print('---进入微博首页---')
 		flag = False
 	except:
+		time.sleep(2)
 		print('<----我的新浪首页加载失败，刷新重试---->')
 		driver.refresh()
 
@@ -237,13 +253,14 @@ while True:
 	flag = True
 	while flag:
 		try:
-			original = WebDriverWait(driver, 10).until(lambda x: x.find_element_by_xpath('//*[@id="v6_pl_content_homefeed"]/div/div[1]/div/ul/li[3]/a'))
+			original = WebDriverWait(driver, 10).until(lambda x: x.find_element_by_xpath('//ul[@class="tab W_fl clearfix"]/li[3]/a'))
 			ActionChains(driver).move_to_element(original).perform()
-			original.click()
 			print('---进入原创页面---')
+			original.click()
 			flag = False
 			time.sleep(2)
 		except:
+			time.sleep(2)
 			print('<----我的微博首页，原创微博页面加载失败，刷新重试---->')
 			driver.refresh()
 
@@ -254,7 +271,7 @@ while True:
 		f.write(str(last_time))
 		print('更新last_time：', last_time)
 
-	print('本次执行结束，休息1小时后继续！')
-    # 间隔1小时
-	time.sleep(60*60)
+	print('本次执行结束，休息30分钟后继续！')
+	# 间隔半小时
+	time.sleep(60*30)
 
